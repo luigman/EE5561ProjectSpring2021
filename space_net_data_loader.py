@@ -18,6 +18,7 @@ import numpy as np
 from PIL import Image
 from torch.utils.data import DataLoader
 from torch.utils.data.sampler import SubsetRandomSampler
+from pathlib import Path
 import os
 import cv2
 
@@ -30,7 +31,7 @@ class SpaceNetDataset(Dataset):
         self.usage = usage
         self.img_list = []
 
-        img_path = os.getcwd() + img_dir
+        img_path = Path(os.path.dirname(__file__) + img_dir)
         for name in os.listdir(img_path):
             if os.path.isfile(os.path.join(img_path, name)):
                 self.img_list.append(name)
@@ -51,12 +52,15 @@ class SpaceNetDataset(Dataset):
             lbl_path = os.path.join(self.label_dir, self.img_list[idx])
             lbl_path = os.getcwd() + lbl_path
             #for some reason half the images are 439,407 and half are 438,406
-            label_building = np.array(Image.open(lbl_path))[:406,:438]
+            label_building = cv2.imread(lbl_path)
+            label_building = cv2.cvtColor(label_building, cv2.COLOR_BGR2GRAY)
+
+            label_building = label_building[:406,:438]
             label_building = cv2.resize(label_building, (388, 388))
             label_no_building = 1 - label_building
             label = np.asarray([label_building, label_no_building])
 
-            sample = {'image': image, 'label': label, 'image_name': self.img_list[idx]}
+            sample = {'image': image, 'label': label_building, 'image_name': self.img_list[idx]}
         elif self.usage == 'test':
             sample = {'image': image, 'image_name': self.img_list[idx]}
         return sample
@@ -65,8 +69,8 @@ class SpaceNetDataset(Dataset):
 
 if __name__ == '__main__':
 
-    img_dir = '/SN1_buildings_train_AOI_1_Rio_3band/3band/'
-    label_dir = '/building_mask/'
+    img_dir = os.path.join('SN1_buildings_train_AOI_1_Rio_3band','3band')
+    label_dir = 'building_mask'
 
     # As of right now usage, just 'train' and 'test'
     # train returns image, label, and name
