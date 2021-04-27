@@ -11,7 +11,6 @@
 #        |-------- space_net_data_loader.py (THIS FILE)
 #
 
-
 import torch
 from torchvision import transforms
 from torch.utils.data.dataset import Dataset
@@ -20,6 +19,7 @@ from PIL import Image
 from torch.utils.data import DataLoader
 from torch.utils.data.sampler import SubsetRandomSampler
 import os
+import cv2
 
 
 class SpaceNetDataset(Dataset):
@@ -43,12 +43,19 @@ class SpaceNetDataset(Dataset):
         img_path = os.getcwd() + img_path
         #for some reason half the images are 439,407 and half are 438,406
         image = np.array(Image.open(img_path))[:406,:438]
+        image = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
+        image = cv2.resize(image, (572, 572))
+        image = np.asarray([image])
 
         if self.usage == 'train':
             lbl_path = os.path.join(self.label_dir, self.img_list[idx])
             lbl_path = os.getcwd() + lbl_path
             #for some reason half the images are 439,407 and half are 438,406
-            label = np.array(Image.open(lbl_path))[:406,:438]
+            label_building = np.array(Image.open(lbl_path))[:406,:438]
+            label_building = cv2.resize(label_building, (388, 388))
+            label_no_building = 1 - label_building
+            label = np.asarray([label_building, label_no_building])
+
             sample = {'image': image, 'label': label, 'image_name': self.img_list[idx]}
         elif self.usage == 'test':
             sample = {'image': image, 'image_name': self.img_list[idx]}
@@ -76,7 +83,7 @@ if __name__ == '__main__':
     dataset_size = len(dataset)
     indices = list(range(dataset_size))
     split = int(np.floor(validation_split * dataset_size))
-    if shuffle_dataset :
+    if shuffle_dataset:
         np.random.seed(random_seed)
         np.random.shuffle(indices)
     train_indices, val_indices = indices[split:], indices[:split]
