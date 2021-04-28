@@ -10,6 +10,8 @@ def ParseCmdLineArguments():
                         default='0')
     parser.add_argument('--batch_size', type=int,
                         default='64')
+    parser.add_argument('--save', type=str,
+                        default='trained_models')
 
     return parser.parse_args()
 
@@ -52,29 +54,61 @@ if __name__ == '__main__':
     optimizer = torch.optim.Adam(UNet.parameters(), lr=1e-4)
     loss = nn.CrossEntropyLoss()
 
+    loss_train = []
+    loss_val = []
     for epoch in range(50):
         UNet.train()
+        
         for train_idx, train_data in enumerate(train_loader):
             image = train_data['image'].cuda(non_blocking=True)
             mask = train_data['label'].cuda(non_blocking=True)
 
             mask_pred = UNet.forward(image)
-            mask_pred = mask_pred + torch.randn(mask_pred.shape).cuda()*1e-2
+            #mask_pred = mask_pred + torch.randn(mask_pred.shape).cuda()*1e-2
             #mask_pred = mask_pred.squeeze(1)
-            print(mask.shape)
-            print(mask_pred.shape)
+            # print(mask.dtype)
+            # print(mask_pred.dtype)
+            # print(mask.shape)
+            # print(mask_pred.shape)
 
             loss_i = loss(mask_pred, mask.long())
             loss_i.backward()
+            optimizer.step()
+            loss_train.append(loss_i.item())
+            print("Epoch:",epoch,"Iteration:",train_idx,"Loss",loss_train[-1])
+            if train_idx % 2 == 0:
+                image_vis = np.squeeze(image.detach().cpu()[0])
+                mask_vis = np.squeeze(mask_pred.detach().cpu()[0])
+                label_vis = np.squeeze(mask.detach().cpu()[0])
+
+                fig, axs = plt.subplots(1,3)
+                axs[0].imshow(image_vis,cmap='gray')
+                axs[1].imshow(mask_vis[0],cmap='gray')
+                axs[2].imshow(label_vis,cmap='gray')
+                plt.show()
+
+        # Saving network's weights
+        path = os.path.join(args.save, 'trained_model-%05d.ckpt' % epoch)
+        torch.save(UNet.state_dict(), path)
 
         if epoch % 1 == 0:
-            
-            image_vis = np.squeeze(image.cpu()[0])
-            mask_vis = np.squeeze(mask_pred.cpu()[0])
-            label_vis = np.squeeze(mask.cpu()[0])
+            image_vis = np.squeeze(image.detach().cpu()[0])
+            mask_vis = np.squeeze(mask_pred.detach().cpu()[0])
+            label_vis = np.squeeze(mask.detach().cpu()[0])
 
             fig, axs = plt.subplots(1,3)
-            axs[0,0].imshow(image_vis)
-            axs[0,1].imshow(mask_vis)
-            axs[0,2].imshow(label_vis)
-            fig.show()
+            axs[0].imshow(image_vis,cmap='gray')
+            axs[1].imshow(mask_vis[0],cmap='gray')
+            axs[2].imshow(label_vis,cmap='gray')
+            plt.show()
+
+        UNet.eval()
+        with torch.no_grad():
+            for val_idx, val_data in enumerate(validation_loader):
+                image = val_data['image'].cuda(non_blocking=True)
+                mask = val_data['label'].cuda(non_blocking=True)
+
+                mask_pred = UNet.forward(image)
+                loss_i = loss(mask_pred, mask.long())
+                loss_val.append(loss_i)
+            print("Epoch:",epoch,"Validation Loss",loss_val[-1])

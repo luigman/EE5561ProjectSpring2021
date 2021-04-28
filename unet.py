@@ -26,7 +26,7 @@ class UNet(nn.Module):
         self.channels = [1, 64, 128, 256, 512, 1024]
 
         self.encoder1 = nn.Sequential(
-            PrintLayer(),
+            # PrintLayer(),
             #Layer 1 - input [64, 1, 572, 572]
             nn.Conv2d(self.channels[0], self.channels[1], 3, stride=1, padding=0),
             nn.ReLU(inplace=True),
@@ -34,7 +34,7 @@ class UNet(nn.Module):
             nn.ReLU(inplace=True))
         self.encoder2 = nn.Sequential(
             nn.MaxPool2d(2,stride=2),
-            PrintLayer(),
+            # PrintLayer(),
             #Layer 2 - input [64, 64, 284, 284]
             nn.Conv2d(self.channels[1], self.channels[2], 3, stride=1, padding=0),
             nn.ReLU(inplace=True),
@@ -42,7 +42,7 @@ class UNet(nn.Module):
             nn.ReLU(inplace=True))
         self.encoder3 = nn.Sequential(
             nn.MaxPool2d(2,stride=2),
-            PrintLayer(),
+            # PrintLayer(),
             #Layer 3 - input [64, 129, 140, 140]
             nn.Conv2d(self.channels[2], self.channels[3], 3, stride=1, padding=0),
             nn.ReLU(inplace=True),
@@ -50,7 +50,7 @@ class UNet(nn.Module):
             nn.ReLU(inplace=True))
         self.encoder4 = nn.Sequential(
             nn.MaxPool2d(2,stride=2),
-            PrintLayer(),
+            # PrintLayer(),
             #Layer 4 - input [64, 256, 68, 68]
             nn.Conv2d(self.channels[3], self.channels[4], 3, stride=1, padding=0),
             nn.ReLU(inplace=True),
@@ -58,13 +58,13 @@ class UNet(nn.Module):
             nn.ReLU(inplace=True))
         self.encoder5 = nn.Sequential(
             nn.MaxPool2d(2,stride=2),
-            PrintLayer(),
+            # PrintLayer(),
             #Layer 5 - input [64, 512, 32, 32]
             nn.Conv2d(self.channels[4], self.channels[5], 3, stride=1, padding=0),
             nn.ReLU(inplace=True),
             nn.Conv2d(self.channels[5], self.channels[5], 3, stride=1, padding=0),
             nn.ReLU(inplace=True),
-            PrintLayer(),
+            # PrintLayer(),
             #smallest size - input [64, 1024, 28, 28]
 
             nn.Upsample(size=(55,55), mode='bilinear', align_corners=False),
@@ -73,7 +73,7 @@ class UNet(nn.Module):
         )
 
         self.decoder4 = nn.Sequential(
-            PrintLayer(),
+            # PrintLayer(),
             #Layer 4 - input [64, 1024, 56, 56]
             nn.Conv2d(self.channels[5], self.channels[4], 3, stride=1, padding=0),
             nn.ReLU(inplace=True),
@@ -84,7 +84,7 @@ class UNet(nn.Module):
             torch.nn.ConvTranspose2d(self.channels[4], self.channels[3], 2, stride=1, padding=0, output_padding=0)
         )
         self.decoder3 = nn.Sequential(
-            PrintLayer(),
+            # PrintLayer(),
             #Layer 3 - input [64, 512, 104, 104]
             nn.Conv2d(self.channels[4], self.channels[3], 3, stride=1, padding=0),
             nn.ReLU(inplace=True),
@@ -95,7 +95,7 @@ class UNet(nn.Module):
             torch.nn.ConvTranspose2d(self.channels[3], self.channels[2], 2, stride=1, padding=0, output_padding=0)
         )
         self.decoder2 = nn.Sequential(
-            PrintLayer(),
+            # PrintLayer(),
             #Layer 2 - input [64, 256, 200, 200]
             nn.Conv2d(self.channels[3], self.channels[2], 3, stride=1, padding=0),
             nn.ReLU(inplace=True),
@@ -105,13 +105,13 @@ class UNet(nn.Module):
             torch.nn.ConvTranspose2d(self.channels[2], self.channels[1], 2, stride=1, padding=0, output_padding=0)
         )
         self.decoder1 = nn.Sequential(
-            PrintLayer(),
+            # PrintLayer(),
             #Layer 3 - input [64, 128, 392, 392]
             nn.Conv2d(self.channels[2], self.channels[1], 3, stride=1, padding=0),
             nn.ReLU(inplace=True),
             nn.Conv2d(self.channels[1], self.channels[1], 3, stride=1, padding=0),
             nn.ReLU(inplace=True),
-            nn.Conv2d(self.channels[1], 1, 1, stride=1, padding=0),
+            nn.Conv2d(self.channels[1], 2, 1, stride=1, padding=0),
             nn.ReLU(inplace=True),
         )
         # self.crop1 = nn.Sequential(transforms.CenterCrop(392))
