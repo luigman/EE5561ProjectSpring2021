@@ -13,6 +13,7 @@ def IoU_contours(contour_pred, contour_label, label_size):
 
     true_pos = 0
     false_pos = 0
+    num_true_build = len(contour_label)
     for i in range(0,len(contour_pred)):
         img1 = cv2.drawContours(np.zeros(label_size), contour_pred, i, 1, cv2.FILLED)
         IoU_max = -1
@@ -41,7 +42,8 @@ def IoU_contours(contour_pred, contour_label, label_size):
         else:
             false_pos += 1
 
-    return true_pos, false_pos
+    false_neg = num_true_build - true_pos
+    return true_pos, false_pos, false_neg
     #precision = true_pos / (true_pos + false_pos)
     #recall = true_pos / (true_pos + false_neg)
 
@@ -50,10 +52,25 @@ def IoU_masks(mask_pred, mask_label):
     cont_pred = mask_to_poly(mask_pred)
     cont_label = mask_to_poly(mask_label)
 
-    true_positives, false_positives = IoU_contours(cont_pred, cont_label, np.shape(mask_label))
+    true_positives, false_positives, false_negatives = IoU_contours(cont_pred, cont_label, np.shape(mask_label))
 
-    return true_positives, false_positives
+    return true_positives, false_positives, false_negatives
 
+
+def measures(tp, fp, fn):
+    if (tp + fp) == 0:
+        print("Error: Precision (tp + fp) == 0")
+        precision = np.nan
+    else:
+        precision = tp / (tp + fp)
+    if (tp + fn) == 0:
+        print("Error: Recall (tp + fn) == 0")
+        recall = np.nan
+    else:
+        recall = tp / (tp + fn)
+    f1 = (2 * precision * recall) / (precision + recall)
+
+    return precision, recall, f1
 
 
 if __name__ == '__main__':
@@ -70,19 +87,59 @@ if __name__ == '__main__':
     lbl_path = os.getcwd() + label_dir + '3band_AOI_1_RIO_img1475.tif'
     label2 = np.array(Image.open(lbl_path))[:406,:438]
 
-    #Uncomment to visualize
-    cont_test = mask_to_poly(label1)
-    img_test = cv2.drawContours(np.zeros(np.shape(label1)), cont_test, -1, 255)
+    lbl_path = os.getcwd() + label_dir + '3band_AOI_1_RIO_img1.tif'
+    label3 = np.array(Image.open(lbl_path))[:406,:438]
+
+    #TESTING STARTS HERE
+    cont_test_1 = mask_to_poly(label1)
+    img_test = cv2.drawContours(np.zeros(np.shape(label1)), cont_test_1, -1, 255)
     cv2.imwrite('test1.png', img_test)
 
-    cont_test = mask_to_poly(label2)
-    img_test = cv2.drawContours(np.zeros(np.shape(label2)), cont_test, -1, 255)
+    cont_test_2 = mask_to_poly(label2)
+    img_test = cv2.drawContours(np.zeros(np.shape(label2)), cont_test_2, -1, 255)
     cv2.imwrite('test2.png', img_test)
+
+    cont_test_3 = mask_to_poly(label3)
+    img_test = cv2.drawContours(np.zeros(np.shape(label3)), cont_test_3, -1, 255)
+    cv2.imwrite('test3.png', img_test)
 
 
     # Test same labels to get accuracy of 1.0
-    true_pos1, false_pos1 = IoU_masks(label1, label1)
-    print(true_pos1, false_pos1)
+    true_pos, false_pos, false_neg = IoU_masks(label1, label1)
+    print("Num of buildings: ", len(cont_test_1))
+    print("Num of predicted Buildings: ", len(cont_test_1))
+    print("TP, FP, FN: ")
+    print(true_pos, false_pos, false_neg)
+    prec, rec, f1 = measures(true_pos, false_pos, false_neg)
+    print("Prec, Rec, F1: ")
+    print(prec, rec, f1)
+
     # Test different labels to get low accuracy
-    true_pos2, false_pos2 = IoU_masks(label1, label2)
-    print(true_pos2, false_pos2)
+    true_pos, false_pos, false_neg = IoU_masks(label1, label2)
+    print("\nNum of buildings: ", len(cont_test_2))
+    print("Num of predicted Buildings: ", len(cont_test_1))
+    print("TP, FP, FN: ")
+    print(true_pos, false_pos, false_neg)
+    prec, rec, f1 = measures(true_pos, false_pos, false_neg)
+    print("Prec, Rec, F1: ")
+    print(prec, rec, f1)
+
+    # Test 98 real buildins but 0 predicted
+    true_pos, false_pos, false_neg = IoU_masks(label1, label3)
+    print("\nNum of buildings: ", len(cont_test_3))
+    print("Num of predicted Buildings: ", len(cont_test_1))
+    print("TP, FP, FN: ")
+    print(true_pos, false_pos, false_neg)
+    prec, rec, f1 = measures(true_pos, false_pos, false_neg)
+    print("Prec, Rec, F1: ")
+    print(prec, rec, f1)
+
+    # Test 0 real buildings but 98 predicted
+    true_pos, false_pos, false_neg = IoU_masks(label3, label1)
+    print("\nNum of buildings: ", len(cont_test_1))
+    print("Num of predicted Buildings: ", len(cont_test_3))
+    print("TP, FP, FN: ")
+    print(true_pos, false_pos, false_neg)
+    prec, rec, f1 = measures(true_pos, false_pos, false_neg)
+    print("Prec, Rec, F1: ")
+    print(prec, rec, f1)
