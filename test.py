@@ -69,6 +69,10 @@ if __name__ == '__main__':
             mask_vis = np.squeeze(mask_pred.detach().cpu().numpy()[0])
             label_vis = np.squeeze(mask.detach().cpu().numpy()[0])
 
+            #threshold mask pred
+            mask_vis[mask_vis<0.5] = 0
+            mask_vis[mask_vis>=0.5] = 1
+
             fig, axs = plt.subplots(1,3)
             axs[0].imshow(image_vis,cmap='gray')
             axs[1].imshow(mask_vis,cmap='gray')

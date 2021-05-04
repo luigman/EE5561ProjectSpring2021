@@ -3,6 +3,7 @@ from space_net_data_loader import *
 from unet import *
 from space_net_data_loader import SpaceNetDataset
 import torch
+from torch import optim
 from torchvision import transforms
 import torch.nn as nn
 import os
@@ -16,6 +17,8 @@ def ParseCmdLineArguments():
                         default='64')
     parser.add_argument('--save', type=str,
                         default='trained_models')
+    parser.add_argument('--load', type=str,
+                        default=None)
 
     return parser.parse_args()
 
@@ -56,10 +59,13 @@ if __name__ == '__main__':
     validation_loader = torch.utils.data.DataLoader(dataset, batch_size=batch_size, sampler=valid_sampler, num_workers=1, pin_memory=False, drop_last=True)
 
     UNet = UNet().cuda()
+    if args.load is not None:
+        UNet.load_state_dict(torch.load(args.load, map_location=torch.device('cuda')))
     #optimizer = torch.optim.Adam(UNet.parameters(), lr=1e-4)
     #loss = nn.CrossEntropyLoss() #used for multiclass segmentation
 
     optimizer = torch.optim.RMSprop(UNet.parameters(), lr=1e-4, weight_decay=1e-8, momentum=0.9)
+    scheduler = optim.lr_scheduler.ReduceLROnPlateau(optimizer, 'max', patience=2)
     loss = nn.BCEWithLogitsLoss()
 
     loss_train = []
@@ -82,42 +88,42 @@ if __name__ == '__main__':
             
             print("Epoch:",epoch,"Iteration:",train_idx,"Loss",loss_train[-1])
 
-            if np.isnan(loss_train[-1]):
-                image_vis = np.squeeze(image.detach().cpu().numpy()[0]).transpose((1,2,0))
-                mask_vis = np.squeeze(mask_pred.detach().cpu().numpy()[0])
-                label_vis = np.squeeze(mask.detach().cpu().numpy()[0])
-
-                fig, axs = plt.subplots(1,3)
-                axs[0].imshow(image_vis,cmap='gray')
-                axs[1].imshow(mask_vis,cmap='gray')
-                axs[2].imshow(label_vis,cmap='gray')
-            
-                plt.show()
-            
-
         # Saving network's weights
         path = os.path.join(args.save, 'trained_model-%05d.ckpt' % epoch)
         torch.save(UNet.state_dict(), path)
 
-        if epoch % 1 == 0:
-            image_vis = np.squeeze(image.detach().cpu().numpy()[0]).transpose((1,2,0))
-            mask_vis = np.squeeze(mask_pred.detach().cpu().numpy()[0])
-            label_vis = np.squeeze(mask.detach().cpu().numpy()[0])
-
-            fig, axs = plt.subplots(1,3)
-            axs[0].imshow(image_vis,cmap='gray')
-            axs[1].imshow(mask_vis,cmap='gray')
-            axs[2].imshow(label_vis,cmap='gray')
-        
-            plt.show()
-
         UNet.eval()
         with torch.no_grad():
+            loss_val_i = []
             for val_idx, val_data in enumerate(validation_loader):
                 image = val_data['image'].cuda(non_blocking=True)
                 mask = val_data['label'].cuda(non_blocking=True)
 
                 mask_pred = UNet(image)
                 loss_i = loss(mask_pred, mask)
-                loss_val.append(loss_i.item())
+                loss_val_i.append(loss_i.item())
+
+            loss_val.append(np.mean(loss_val_i))
             print("Epoch:",epoch,"Validation Loss",loss_val[-1])
+            scheduler.step(loss_val[-1])
+
+            image_vis = np.squeeze(image.cpu().numpy()[0]).transpose((1,2,0))
+            mask_vis = np.squeeze(torch.sigmoid(mask_pred).cpu().numpy()[0])
+            label_vis = np.squeeze(mask.cpu().numpy()[0])
+            fig, axs = plt.subplots(1,3)
+            axs[0].imshow(image_vis,cmap='gray')
+            axs[0].title.set_text("Input Image")
+            axs[1].imshow(mask_vis,cmap='gray')
+            axs[1].title.set_text("Predicted Mask")
+            axs[2].imshow(label_vis,cmap='gray')
+            axs[2].title.set_text("Ground Truth")
+        
+            plt.show()
+            fig, axs = plt.subplots(1,2)
+            axs[0].plot(loss_train)
+            axs[0].title.set_text("Training Loss")
+            axs[0].set(xlabel='Iterations', ylabel='Loss')
+            axs[1].plot(loss_val)
+            axs[1].title.set_text("Validation Loss")
+            axs[1].set(xlabel='Epochs', ylabel='Loss')
+            plt.show()
