@@ -1,6 +1,8 @@
 # EE5561ProjectSpring2021
 
-A PyTorch implementation of UNet semantic segmentation network, applied to the SpaceNet v1 Building Detection Challenge
+A PyTorch implementation of UNet semantic segmentation network, applied to the SpaceNet v1 Building Detection Challenge. View the [project report here](https://www.luisjguzman.com/media/EE5561/building_detection.pdf).
+
+<img src="./results.png" width="500">
 
 ## Contributors
 - Liam Coulter
@@ -24,7 +26,7 @@ Official data for SpaceNet v1 Building Challenge is also accessible through [AWS
 
 To train the UNet, run `train.py` using the command `python train.py --batch_size 16`
 
-A batch size of 16 takes approximately 12GB of video memory, so adjust the batch size according to what you have availible
+A batch size of 16 takes approximately 12GB of video memory, so adjust the batch size according to what you have available.
 
 ## Testing
 
