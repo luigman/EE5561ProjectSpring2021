@@ -1,4 +1,4 @@
-# EE5561ProjectSpring2021
+# Satellite Image Building Detection using U-Net Convolutional Neural Network
 
 A PyTorch implementation of UNet semantic segmentation network, applied to the SpaceNet v1 Building Detection Challenge. View the [project report here](https://www.luisjguzman.com/media/EE5561/building_detection.pdf).
 
